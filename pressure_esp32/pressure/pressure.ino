@@ -2,12 +2,20 @@
 #include <PubSubClient.h>
 #include "QuickSort.h"
 #include "configuration.h"
+#include <esp_system.h>
 
 WiFiClient espClient;
 PubSubClient pubClient(espClient);
+hw_timer_t *timer = NULL;
+
+void IRAM_ATTR resetModule() {
+  Serial.println("Timeout... Sleeping without publishing pressure...");
+  deepSleep();
+}
 
 void setup() {
   Serial.begin(115200);
+  setupResetTimer();
   setupWifi();
   setupMqttClient();
   setupSensor();
@@ -109,4 +117,11 @@ void deepSleep() {
 
   esp_sleep_enable_timer_wakeup(SLEEP_SECONDS * 1000000);
   esp_deep_sleep_start();
+}
+
+void setupResetTimer() {
+  timer = timerBegin(0, 80, true);
+  timerAttachInterrupt(timer, &resetModule, true);
+  timerAlarmWrite(timer, TIMER_TIMEOUT * 1000, false);
+  timerAlarmEnable(timer);
 }
